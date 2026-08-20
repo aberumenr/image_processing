@@ -165,3 +165,69 @@ for filename in image_files:
 
     plt.tight_layout()
     plt.show()
+
+    equalized = histogram_equalization(original)
+
+    # save da equalized image
+    output_path = (
+        EQUALIZATION_DIR
+        / f"{Path(filename).stem}_equalized.jpg"
+    )
+    cv2.imwrite(str(output_path), equalized)
+
+    # calculate histograms for original and equalized images
+    original_histogram = cv2.calcHist(
+        [original],
+        [0],
+        None,
+        [256],
+        [0, 256]
+    )
+
+    equalized_histogram = cv2.calcHist(
+        [equalized],
+        [0],
+        None,
+        [256],
+        [0, 256]
+    )
+
+    # images n their histograms comparison
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.imshow(original, cmap="gray", vmin=0, vmax=255)
+    plt.title(f"Original: {filename}")
+    plt.axis("off")
+
+    plt.subplot(2, 2, 2)
+    plt.imshow(equalized, cmap="gray", vmin=0, vmax=255)
+    plt.title("Histogram equalization")
+    plt.axis("off")
+
+    plt.subplot(2, 2, 3)
+    plt.plot(original_histogram, color="black")
+    plt.title("Original histogram")
+    plt.xlabel("Intensity")
+    plt.ylabel("Frequency")
+    plt.xlim([0, 255])
+    plt.grid(alpha=0.2)
+
+    plt.subplot(2, 2, 4)
+    plt.plot(equalized_histogram, color="black")
+    plt.title("Equalized histogram")
+    plt.xlabel("Intensity")
+    plt.ylabel("Frequency")
+    plt.xlim([0, 255])
+    plt.grid(alpha=0.2)
+
+    plt.tight_layout()
+
+    # save comparison histogram
+    histogram_path = (
+        HISTOGRAM_DIR
+        / f"{Path(filename).stem}_histogram_comparison.png"
+    )
+    plt.savefig(histogram_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
