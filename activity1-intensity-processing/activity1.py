@@ -33,34 +33,40 @@ image_files = [
 
 
 def negative_transformation(image):
-    """
-    Applies the negative transformation:
-    s = 255 - r
-    """
     return 255 - image
 
 def logarithmic_transformation(image, c):
-    """
-    Applies the logarithmic transformation:
-    s = c * log(1 + r)
-    """
     image_float = image.astype(np.float32)
     transformed = c * np.log1p(image_float)
 
-    # Keep intensity values within the valid range
     transformed = np.clip(transformed, 0, 255)
 
     return transformed.astype(np.uint8)
 
-# Standard logarithmic constant
 standard_c = 255 / np.log(1 + 255)
 
-# Different values requested by the activity
 logarithmic_constants = [
     standard_c * 0.5,
     standard_c,
     standard_c * 1.5
 ]
+
+def gamma_transformation(image, gamma, c=1.0):
+    normalized = image.astype(np.float32) / 255.0
+    transformed = c * np.power(normalized, gamma)
+
+    transformed = np.clip(transformed * 255, 0, 255)
+
+    return transformed.astype(np.uint8)
+
+gamma_values = [
+    0.4,
+    1.0,
+    2.5
+]
+
+def histogram_equalization(image):
+    return cv2.equalizeHist(image)
 
 for filename in image_files:
     image_path = IMAGES_DIR / filename
@@ -122,6 +128,39 @@ for filename in image_files:
         plt.subplot(1, 4, index)
         plt.imshow(logarithmic, cmap="gray", vmin=0, vmax=255)
         plt.title(f"Logarithmic\nc = {c:.2f}")
+        plt.axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+        # apply gamma transformation with diff gamma values
+    gamma_results = []
+
+    for gamma in gamma_values:
+        gamma_image = gamma_transformation(original, gamma)
+        gamma_results.append((gamma, gamma_image))
+
+        output_path = (
+            GAMMA_DIR
+            / f"{Path(filename).stem}_gamma_{gamma:.1f}.jpg"
+        )
+        cv2.imwrite(str(output_path), gamma_image)
+
+    # comparison between original and gamma transformations
+    plt.figure(figsize=(16, 5))
+
+    plt.subplot(1, 4, 1)
+    plt.imshow(original, cmap="gray", vmin=0, vmax=255)
+    plt.title(f"Original: {filename}")
+    plt.axis("off")
+
+    for index, (gamma, gamma_image) in enumerate(
+        gamma_results,
+        start=2
+    ):
+        plt.subplot(1, 4, index)
+        plt.imshow(gamma_image, cmap="gray", vmin=0, vmax=255)
+        plt.title(f"Gamma\nγ = {gamma:.1f}")
         plt.axis("off")
 
     plt.tight_layout()
