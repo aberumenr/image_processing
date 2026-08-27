@@ -19,7 +19,11 @@ IMAGE_FILES = [
 
 def load_grayscale_image(filename):
     image_path = IMAGES_DIR / filename
-    image = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+
+    image = cv2.imread(
+        str(image_path),
+        cv2.IMREAD_GRAYSCALE
+    )
 
     if image is None:
         raise FileNotFoundError(
@@ -27,6 +31,7 @@ def load_grayscale_image(filename):
         )
 
     return image
+
 
 def calculate_histogram(image):
     histogram = np.zeros(256, dtype=np.int64)
@@ -40,15 +45,19 @@ def calculate_histogram(image):
 
     return histogram
 
+
 def negative_transformation(image):
     height, width = image.shape
     negative = np.zeros_like(image)
 
     for row in range(height):
         for column in range(width):
-            negative[row, column] = 255 - image[row, column]
+            negative[row, column] = (
+                255 - image[row, column]
+            )
 
     return negative
+
 
 def gamma_transformation(image, gamma):
     height, width = image.shape
@@ -56,11 +65,17 @@ def gamma_transformation(image, gamma):
 
     for row in range(height):
         for column in range(width):
-            original_intensity = image[row, column]
-            normalized_intensity = original_intensity / 255.0
+            original_intensity = int(
+                image[row, column]
+            )
+
+            normalized_intensity = (
+                original_intensity / 255.0
+            )
 
             transformed_intensity = (
-                255.0 * (normalized_intensity ** gamma)
+                255.0
+                * (normalized_intensity ** gamma)
             )
 
             if transformed_intensity < 0:
@@ -74,10 +89,12 @@ def gamma_transformation(image, gamma):
 
     return result
 
+
 def display_parameter_comparison(
     original,
     processed_images,
-    title
+    title,
+    output_filename
 ):
     figure, axes = plt.subplots(
         2,
@@ -85,6 +102,7 @@ def display_parameter_comparison(
         figsize=(12, 8),
         constrained_layout=True
     )
+
     axes = axes.flatten()
 
     axes[0].imshow(
@@ -106,6 +124,7 @@ def display_parameter_comparison(
             vmin=0,
             vmax=255
         )
+
         axes[index].set_title(
             rf"$\gamma={parameter}$"
         )
@@ -113,12 +132,20 @@ def display_parameter_comparison(
 
     figure.suptitle(title, fontsize=16)
 
+    figure.savefig(
+        RESULTS_DIR / output_filename,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+
 def display_comparison(
     original,
     processed,
     original_histogram,
     processed_histogram,
-    title
+    title,
+    output_filename
 ):
     figure, axes = plt.subplots(
         2,
@@ -169,62 +196,44 @@ def display_comparison(
 
     figure.suptitle(title, fontsize=16)
 
-def display_original_images(images):
-    figure, axes = plt.subplots(
-        2,
-        2,
-        figsize=(12, 8),
-        constrained_layout=True
+    figure.savefig(
+        RESULTS_DIR / output_filename,
+        dpi=300,
+        bbox_inches="tight"
     )
-    axes = axes.flatten()
 
-    for index, filename in enumerate(IMAGE_FILES):
-        axes[index].imshow(
-            images[filename],
-            cmap="gray",
-            vmin=0,
-            vmax=255
+
+def process_gamma_tests(
+    original,
+    gamma_values,
+    image_number
+):
+    results = {}
+
+    for gamma in gamma_values:
+        processed = gamma_transformation(
+            original,
+            gamma
         )
-        axes[index].set_title(filename)
-        axes[index].axis("off")
 
-    figure.suptitle(
-        "Imágenes originales",
-        fontsize=16
-    )
+        results[gamma] = processed
 
-
-def display_original_histograms(histograms):
-    figure, axes = plt.subplots(
-        2,
-        2,
-        figsize=(12, 8),
-        constrained_layout=True
-    )
-    axes = axes.flatten()
-
-    for index, filename in enumerate(IMAGE_FILES):
-        axes[index].plot(
-            range(256),
-            histograms[filename],
-            color="black",
-            linewidth=1
+        cv2.imwrite(
+            str(
+                RESULTS_DIR
+                / f"image{image_number}_gamma_{gamma}.jpg"
+            ),
+            processed
         )
-        axes[index].set_title(f"Histograma de {filename}")
-        axes[index].set_xlim(0, 255)
-        axes[index].set_xlabel("Nivel de intensidad")
-        axes[index].set_ylabel("Cantidad de píxeles")
-        axes[index].grid(alpha=0.2)
 
-    figure.suptitle(
-        "Histogramas originales",
-        fontsize=16
-    )
+    return results
 
-    plt.show()
 
 def main():
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_DIR.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     images = {}
     histograms = {}
@@ -244,10 +253,77 @@ def main():
             f"pixels={image.size}, "
             f"histogram total={histogram.sum()}"
         )
-        
-    # negative for image4
-    image4_negative = negative_transformation(images["image4.jpg"])
-    image4_negative_histogram = calculate_histogram(image4_negative)
+
+    # Image 1: gamma transformation
+    image1_results = process_gamma_tests(
+        images["image1.jpg"],
+        [1.5, 2.0, 2.5],
+        1
+    )
+
+    # Image 2: gamma transformation
+    image2_results = process_gamma_tests(
+        images["image2.jpg"],
+        [2.0, 3.0, 4.0],
+        2
+    )
+
+    # Image 3: gamma transformation
+    image3_results = process_gamma_tests(
+        images["image3.jpg"],
+        [0.4, 0.6, 0.8],
+        3
+    )
+
+    selected_image1 = image1_results[2.5]
+    selected_image2 = image2_results[3.0]
+    selected_image3 = image3_results[0.6]
+
+    selected_image1_histogram = calculate_histogram(
+        selected_image1
+    )
+    selected_image2_histogram = calculate_histogram(
+        selected_image2
+    )
+    selected_image3_histogram = calculate_histogram(
+        selected_image3
+    )
+
+    display_comparison(
+        images["image1.jpg"],
+        selected_image1,
+        histograms["image1.jpg"],
+        selected_image1_histogram,
+        r"Imagen 1 - Resultado seleccionado: $\gamma=2.5$",
+        "image1_final_comparison.png"
+    )
+
+    display_comparison(
+        images["image2.jpg"],
+        selected_image2,
+        histograms["image2.jpg"],
+        selected_image2_histogram,
+        r"Imagen 2 - Resultado seleccionado: $\gamma=3.0$",
+        "image2_final_comparison.png"
+    )
+
+    display_comparison(
+        images["image3.jpg"],
+        selected_image3,
+        histograms["image3.jpg"],
+        selected_image3_histogram,
+        r"Imagen 3 - Resultado seleccionado: $\gamma=0.6$",
+        "image3_final_comparison.png"
+    )
+
+    # Image 4: negative transformation
+    image4_negative = negative_transformation(
+        images["image4.jpg"]
+    )
+
+    image4_negative_histogram = calculate_histogram(
+        image4_negative
+    )
 
     cv2.imwrite(
         str(RESULTS_DIR / "image4_negative.jpg"),
@@ -259,39 +335,12 @@ def main():
         image4_negative,
         histograms["image4.jpg"],
         image4_negative_histogram,
-        "Imagen 4 - Transformación negativa"
+        "Imagen 4 - Transformación negativa",
+        "image4_final_comparison.png"
     )
 
-    # the gamma one
-    image1_gamma_values = [1.5, 2.0, 2.5]
-    image1_gamma_results = {}
-
-    for gamma in image1_gamma_values:
-        result = gamma_transformation(
-            images["image1.jpg"],
-            gamma
-        )
-
-        image1_gamma_results[gamma] = result
-
-        cv2.imwrite(
-            str(
-                RESULTS_DIR
-                / f"image1_gamma_{gamma}.jpg"
-            ),
-            result
-        )
-
-    display_parameter_comparison(
-        images["image1.jpg"],
-        image1_gamma_results,
-        "Imagen 1 - Comparación de transformación gamma"
-    )
-    display_original_images(images)
-    display_original_histograms(histograms)
+    plt.show()
 
 
 if __name__ == "__main__":
     main()
-
-plt.show()
