@@ -1,47 +1,61 @@
 import cv2
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-imagen = cv2.imread("Fine stripes.jpg")
+folder = Path(__file__).resolve().parent
+imagePath = folder / "Fine stripes.jpg"
+
+print("trying to open:", imagePath)
+
+imagen = cv2.imread(str(imagePath))
+
+if imagen is None:
+    raise FileNotFoundError(f"could not open: {imagePath}")
+
 imagen = cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB)
 
-# submuestreo :p
+factor = 8
 
-# una si, una no COLUMNAS
-sub_columnas = imagen[:, ::2]
+subsampling = imagen[::factor, ::factor]
 
-# una si, una no FILAS
-sub_filas = imagen[::2, :]
+kernel = 25
+sigma = 4
 
-# una si, una no FILAS y COLUMNAS
-sub_filas_columnas = imagen[::2, ::2]
+filteredImage = cv2.GaussianBlur(
+    imagen,
+    (kernel, kernel),
+    sigmaX=sigma
+)
 
-fig, ejes = plt.subplots(2, 2, figsize=(12, 10))
+subsampling_gaussiano = filteredImage[::factor, ::factor]
 
-ejes[0, 0].imshow(imagen)
-ejes[0, 0].set_title(
+fig, ejes = plt.subplots(1, 3, figsize=(16, 7))
+
+ejes[0].imshow(imagen)
+ejes[0].set_title(
     f"original pic\n{imagen.shape[1]} × {imagen.shape[0]} pixels"
 )
-'''
-ejes[0, 1].imshow(sub_columnas)
-ejes[0, 1].set_title(
-    f"Submuestreo de columnas\n{sub_columnas.shape[1]} × "
-    f"{sub_columnas.shape[0]} pixels"
+
+ejes[1].imshow(
+    subsampling,
+    interpolation="nearest"  
+)
+ejes[1].set_title(
+    f"subsampling, factor {factor}\n"
+    f"{subsampling.shape[1]} × {subsampling.shape[0]} pixels"
 )
 
-ejes[1, 0].imshow(sub_filas)
-ejes[1, 0].set_title(
-    f"Submuestreo de filas\n{sub_filas.shape[1]} × "
-    f"{sub_filas.shape[0]} pixels"
-)'''
-
-ejes[1, 1].imshow(sub_filas_columnas)
-ejes[1, 1].set_title(
-    f"subsampling\n"
-    f"{sub_filas_columnas.shape[1]} × "
-    f"{sub_filas_columnas.shape[0]} pixels"
+ejes[2].imshow(
+    subsampling_gaussiano,
+    interpolation="nearest"
+)
+ejes[2].set_title(
+    f"gaussian filter\n"
+    f"{subsampling_gaussiano.shape[1]} × "
+    f"{subsampling_gaussiano.shape[0]} pixels"
 )
 
-for eje in ejes.flat:
+for eje in ejes:
     eje.axis("off")
 
 plt.tight_layout()
