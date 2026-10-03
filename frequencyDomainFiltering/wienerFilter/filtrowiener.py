@@ -15,6 +15,18 @@ def cargar_degradacion():
     especificacion.loader.exec_module(modulo)
     return modulo
 
+def calcular_mse(original, resultado):
+    return np.mean(
+        (original.astype(float) - resultado.astype(float)) ** 2
+    )
+
+def calcular_psnr(original, resultado):
+    mse = calcular_mse(original, resultado)
+
+    if mse == 0:
+        return float("inf")
+
+    return 10 * np.log10((255 ** 2) / mse)
 
 def filtro_wiener(g, h, K=0.01):
     G = np.fft.fft2(g)
@@ -47,26 +59,70 @@ if imagen.max() <= 1:
     imagen = imagen * 255
 
 degradacion = cargar_degradacion()
-g, h, _, _ = degradacion.degradar_imagen(imagen)
-imagen_filtrada, G_centrada, W = filtro_wiener(g, h)
 
-plt.figure(figsize=(12, 8))
-plt.subplot(2, 2, 1)
+# Fixed seed so the same noise is generated every time
+np.random.seed(0)
+
+g, h, _, _ = degradacion.degradar_imagen(imagen)
+
+# Evaluate several values of K
+K_values = [0.001, 0.01, 0.1]
+resultados = []
+
+print("Imagen degradada:")
+print(f"MSE: {calcular_mse(imagen, g):.2f}")
+print(f"PSNR: {calcular_psnr(imagen, g):.2f} dB")
+
+for K in K_values:
+    imagen_filtrada, G_centrada, W = filtro_wiener(
+        g,
+        h,
+        K=K
+    )
+
+    mse = calcular_mse(imagen, imagen_filtrada)
+    psnr = calcular_psnr(imagen, imagen_filtrada)
+
+    resultados.append(imagen_filtrada)
+
+    print(f"\nFiltro Wiener con K = {K}:")
+    print(f"MSE: {mse:.2f}")
+    print(f"PSNR: {psnr:.2f} dB")
+
+plt.figure(figsize=(16, 10))
+
+plt.subplot(2, 3, 1)
 plt.imshow(imagen, cmap="gray", vmin=0, vmax=255)
 plt.title("Imagen original f(x,y)")
 plt.axis("off")
-plt.subplot(2, 2, 2)
+
+plt.subplot(2, 3, 2)
 plt.imshow(g, cmap="gray", vmin=0, vmax=255)
 plt.title("Imagen degradada g(x,y)")
 plt.axis("off")
-plt.subplot(2, 2, 3)
-plt.imshow(np.log1p(np.abs(G_centrada)), cmap="gray")
+
+plt.subplot(2, 3, 3)
+plt.imshow(
+    np.log1p(np.abs(G_centrada)),
+    cmap="gray"
+)
 plt.title("Espectro centrado G(u,v)")
 plt.axis("off")
-plt.subplot(2, 2, 4)
-plt.imshow(imagen_filtrada, cmap="gray", vmin=0, vmax=255)
-plt.title("Imagen filtrada (Wiener)")
-plt.axis("off")
+
+for indice, (K, resultado) in enumerate(
+    zip(K_values, resultados),
+    start=4
+):
+    plt.subplot(2, 3, indice)
+    plt.imshow(
+        resultado,
+        cmap="gray",
+        vmin=0,
+        vmax=255
+    )
+    plt.title(f"Filtro Wiener: K = {K}")
+    plt.axis("off")
+
 plt.tight_layout()
 plt.show()
 

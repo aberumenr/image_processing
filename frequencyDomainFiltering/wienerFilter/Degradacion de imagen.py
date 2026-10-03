@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep 24 20:27:47 2026
-
-@author: marti
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -28,8 +21,7 @@ def convolucion_2d(I, h):
     return resultado
 
 
-def degradar_imagen(I, sigma_blur=3, sigma_ruido=15):
-    """Aplica el desenfoque gaussiano y el ruido de este programa."""
+def degradar_imagen(I, sigma_blur=4, sigma_ruido=20):
     I = np.asarray(I, dtype=float)
     tamaño = int(6 * sigma_blur + 1)
 
@@ -50,7 +42,7 @@ def degradar_imagen(I, sigma_blur=3, sigma_ruido=15):
 
 
 if __name__ == "__main__":
-    imagen = plt.imread("puppy.jpg")
+    imagen = plt.imread("kitty.jpg")
 
     if imagen.ndim == 3:
         I = np.mean(imagen[:, :, :3], axis=2)
@@ -62,7 +54,7 @@ if __name__ == "__main__":
 
     g, h, I_blur, n = degradar_imagen(I)
 
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(16, 10))
     plt.subplot(2, 2, 1)
     plt.imshow(I, cmap="gray")
     plt.title("Imagen original I(x,y)")
@@ -81,3 +73,5 @@ if __name__ == "__main__":
     plt.axis("off")
     plt.tight_layout()
     plt.show()
+
+    
