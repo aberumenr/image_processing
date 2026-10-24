@@ -25,7 +25,8 @@ filtered_image = np.real(np.fft.ifft2(G))
 
 original_spectrum = np.log1p(np.abs(F_centered))
 filtered_spectrum = np.log1p(np.abs(G_centered))
-plt.figure(figsize=(12, 10))
+
+plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 2, 1)
 plt.imshow(image, cmap="gray")
@@ -34,12 +35,12 @@ plt.subplot(2, 2, 2)
 plt.imshow(original_spectrum, cmap="gray")
 
 plt.subplot(2, 2, 3)
-plt.imshow(H, cmap="gray")
-
-plt.subplot(2, 2, 4)
 plt.imshow(filtered_image, cmap="gray")
 
-plt.subplots_adjust(hspace=0.25, wspace=0.20)
+plt.subplot(2, 2, 4)
+plt.imshow(filtered_spectrum, cmap="gray")
+
+plt.tight_layout()
 plt.show()
 
 print("Tamaño de la imagen:", rows, "x", columns)
