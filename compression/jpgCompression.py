@@ -85,7 +85,6 @@ def reconstruct_image(blocks):
 
     return reconstructed
 
-
 folder = Path(__file__).resolve().parent
 image_path = folder / "babycat.jpg"
 
