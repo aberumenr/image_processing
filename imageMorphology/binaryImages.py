@@ -5,32 +5,85 @@ from pathlib import Path
 
 
 def translate_set(binary_set, shift_x, shift_y):
+    translated = np.zeros_like(binary_set)
 
-    # making an empty image where the translated set will go
-    translated_set = np.zeros_like(binary_set)
-
-    # getting the coordinates of all the white points in b
     points_y, points_x = np.where(binary_set == 255)
 
-    # adding the translation vector z to every point
     new_x = points_x + shift_x
     new_y = points_y + shift_y
 
-    # keeping only the points that are still inside the image
-    valid_points = (
+    valid = (
         (new_x >= 0)
         & (new_x < binary_set.shape[1])
         & (new_y >= 0)
         & (new_y < binary_set.shape[0])
     )
 
-    # placing the translated points in the new image
-    translated_set[
-        new_y[valid_points],
-        new_x[valid_points]
-    ] = 255
+    translated[new_y[valid], new_x[valid]] = 255
 
-    return translated_set
+    return translated
+
+
+def erosion_manual(image, element):
+    height, width = image.shape
+    element_height, element_width = element.shape
+
+    radius_y = element_height // 2
+    radius_x = element_width // 2
+
+    padded = np.pad(
+        image,
+        ((radius_y, radius_y), (radius_x, radius_x)),
+        mode="constant",
+        constant_values=0
+    )
+
+    result = np.zeros_like(image)
+
+    for y in range(height):
+        for x in range(width):
+            region = padded[
+                y:y + element_height,
+                x:x + element_width
+            ]
+
+            values = region[element == 1]
+
+            if np.all(values == 255):
+                result[y, x] = 255
+
+    return result
+
+
+def dilation_manual(image, element):
+    height, width = image.shape
+    element_height, element_width = element.shape
+
+    radius_y = element_height // 2
+    radius_x = element_width // 2
+
+    padded = np.pad(
+        image,
+        ((radius_y, radius_y), (radius_x, radius_x)),
+        mode="constant",
+        constant_values=0
+    )
+
+    result = np.zeros_like(image)
+
+    for y in range(height):
+        for x in range(width):
+            region = padded[
+                y:y + element_height,
+                x:x + element_width
+            ]
+
+            values = region[element == 1]
+
+            if np.any(values == 255):
+                result[y, x] = 255
+
+    return result
 
 
 folder = Path(__file__).resolve().parent
@@ -43,7 +96,6 @@ if image is None:
         f"could not open: {image_path}"
     )
 
-# turning the image grayscale first
 gray_image = cv2.cvtColor(
     image,
     cv2.COLOR_BGR2GRAY
@@ -51,7 +103,6 @@ gray_image = cv2.cvtColor(
 
 threshold_value = 128
 
-# making the binary image
 _, binary_image = cv2.threshold(
     gray_image,
     threshold_value,
@@ -61,7 +112,7 @@ _, binary_image = cv2.threshold(
 
 height, width = binary_image.shape
 
-# choosing the middle section of the image as set b
+# grabbing the middle part as b
 x1 = width // 4
 x2 = 3 * width // 4
 y1 = height // 4
@@ -69,10 +120,9 @@ y2 = 3 * height // 4
 
 B = binary_image[y1:y2, x1:x2]
 
-# reflecting b around its center
+# flipping both directions gives us b hat
 B_hat = B[::-1, ::-1]
 
-# adding space around b so we can actually see it move
 padding = 100
 
 B_canvas = np.zeros(
@@ -88,7 +138,6 @@ B_canvas[
     padding:padding + B.shape[1]
 ] = B
 
-# translation vector z = (x, y)
 shift_x = 80
 shift_y = 40
 
@@ -98,43 +147,79 @@ B_translated = translate_set(
     shift_y
 )
 
-fig, axes = plt.subplots(1, 4, figsize=(18, 5))
+# small b for the morphology operations
+morphology_B = np.ones(
+    (5, 5),
+    dtype=np.uint8
+)
 
-axes[0].imshow(
+erosion = erosion_manual(
+    binary_image,
+    morphology_B
+)
+
+dilation = dilation_manual(
+    binary_image,
+    morphology_B
+)
+
+fig, axes = plt.subplots(
+    2,
+    3,
+    figsize=(16, 10)
+)
+
+axes[0, 0].imshow(
     binary_image,
     cmap="gray",
     vmin=0,
     vmax=255
 )
-axes[0].set_title("binary image")
+axes[0, 0].set_title("binary image")
 
-axes[1].imshow(
+axes[0, 1].imshow(
     B,
     cmap="gray",
     vmin=0,
     vmax=255
 )
-axes[1].set_title("set B")
+axes[0, 1].set_title("set B")
 
-axes[2].imshow(
+axes[0, 2].imshow(
     B_hat,
     cmap="gray",
     vmin=0,
     vmax=255
 )
-axes[2].set_title(r"reflection $\hat{B}$")
+axes[0, 2].set_title(r"reflection $\hat{B}$")
 
-axes[3].imshow(
+axes[1, 0].imshow(
     B_translated,
     cmap="gray",
     vmin=0,
     vmax=255
 )
-axes[3].set_title(
+axes[1, 0].set_title(
     rf"translation $(B)_z$, $z=({shift_x}, {shift_y})$"
 )
 
-for axis in axes:
+axes[1, 1].imshow(
+    erosion,
+    cmap="gray",
+    vmin=0,
+    vmax=255
+)
+axes[1, 1].set_title("manual erosion — 5 × 5")
+
+axes[1, 2].imshow(
+    dilation,
+    cmap="gray",
+    vmin=0,
+    vmax=255
+)
+axes[1, 2].set_title("manual dilation — 5 × 5")
+
+for axis in axes.flat:
     axis.axis("off")
 
 plt.tight_layout()
