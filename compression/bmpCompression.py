@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 def create_image(width, height, channels=3):
     return np.zeros(
@@ -61,13 +62,29 @@ def prepare_bmp_pixels(image):
 width = 513
 height = 512
 
-image_rgb = generate_colors(width, height)
+image_rgb = generate_colors(
+    width,
+    height
+)
 
-pixel_data, padding = prepare_bmp_pixels(image_rgb)
+pixel_data, padding = prepare_bmp_pixels(
+    image_rgb
+)
 
 print("image shape:", image_rgb.shape)
 print("padding per row:", padding)
 print("pixel data bytes:", len(pixel_data))
+
+# save the png beside this python file
+folder = Path(__file__).resolve().parent
+output_path = folder / "generated_rgb.png"
+
+plt.imsave(
+    output_path,
+    image_rgb
+)
+
+print("image saved at:", output_path)
 
 plt.imshow(image_rgb)
 plt.title(
